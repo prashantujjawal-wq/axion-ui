@@ -39,3 +39,40 @@ stages:
         containerRegistry: $(dockerRegistryServiceConnection)
         tags: |
           $(tag)
+
+- stage: DeployQA
+  displayName: 'Deploy to AKS QA'
+  dependsOn: Build
+  condition: succeeded()
+
+  jobs:
+    - deployment: DeployAxionUI
+      displayName: 'Deploy Axion UI to QA'
+      environment: 'axion-qa'
+
+      pool:
+        vmImage: 'ubuntu-latest'
+
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+              - task: AzureCLI@2
+                displayName: 'Deploy image to AKS'
+                inputs:
+                  azureSubscription: 'sc-axion-azure'
+                  scriptType: bash
+                  scriptLocation: inlineScript
+                  inlineScript: |
+                    set -e
+
+                    az aks get-credentials \
+                      --resource-group rg-k8s-lb-lab \
+                      --name aks-learning \
+                      --overwrite-existing
+                    
+                    kubectl get namespaces
+
+                    kubectl get deployment axion-ui \
+                      -n axion-qa
+
