@@ -71,8 +71,12 @@ stages:
                       --name aks-learning \
                       --overwrite-existing
                     
-                    kubectl get namespaces
-
-                    kubectl get deployment axion-ui \
+                    kubectl set image \
+                      deployment/axion-ui \
+                      axion-ui=axionacr2769710445.azurecr.io/axion-ui:$(Build.BuildId) \
                       -n axion-qa
 
+                    kubectl rollout status \
+                      deployment/axion-ui \
+                      -n axion-qa \
+                      --timeout=180s
