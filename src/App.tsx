@@ -166,7 +166,12 @@ function App() {
               <Sidebar />
               
               <div className="flex-1 lg:ml-64 ml-16 min-w-0 flex flex-col h-screen overflow-hidden">
-                <TopBar onlineAssets={summary.onlineAssets} lastUpdate={formatAppDate(summary.lastUpdateRaw, timezone)} onLogout={handleLogout} />
+                <TopBar onlineAssets={summary.onlineAssets} lastUpdate={formatAppDate(summary.lastUpdateRaw, timezone)} onLogout={handleLogout} /> 
+                
+                <div className="bg-blue-600 text-white text-center py-2 text-sm font-semibold">
+                  QA Release Validation — Azure DevOps CI/CD
+                </div>
+
                 
                 <Routes>
                   <Route path="/" element={<Navigate to="/fleet" replace />} />
