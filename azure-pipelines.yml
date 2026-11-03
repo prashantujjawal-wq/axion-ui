@@ -13,7 +13,7 @@ resources:
 variables:
   # Container registry service connection established during pipeline creation
   dockerRegistryServiceConnection: 'ee7a8c53-2ceb-4a9e-abe0-5bead2c89a2c'
-  imageRepository: 'axionui'
+  imageRepository: 'axion-ui'
   containerRegistry: 'axionacr2769710445.azurecr.io'
   dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
   tag: '$(Build.BuildId)'
