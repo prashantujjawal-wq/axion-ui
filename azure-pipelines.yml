@@ -1,0 +1,131 @@
+
+trigger:
+  branches:
+    include:
+      - develop
+      - main
+
+pr:
+  branches:
+    include:
+      - develop
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  acrConnection: 'axionacr2769710445'
+  azureConnection: 'sc-axion-azure'
+  acrServer: 'axionacr2769710445.azurecr.io'
+  imageRepository: 'axion-ui'
+  imageTag: '$(Build.BuildId)'
+  resourceGroup: 'rg-k8s-lb-lab'
+  aksCluster: 'aks-learning'
+
+stages:
+
+- stage: Build
+  displayName: Build Scan Push
+  jobs:
+  - job: BuildImage
+    steps:
+    - checkout: self
+
+    - task: Docker@2
+      displayName: Build Docker image
+      inputs:
+        command: build
+        containerRegistry: '$(acrConnection)'
+        repository: '$(imageRepository)'
+        Dockerfile: '$(Build.SourcesDirectory)/Dockerfile'
+        buildContext: '$(Build.SourcesDirectory)'
+        tags: |
+          $(imageTag)
+
+    - script: |
+        docker run --rm \
+          -v /var/run/docker.sock:/var/run/docker.sock \
+          aquasec/trivy:latest image \
+          --severity HIGH,CRITICAL \
+          --exit-code 1 \
+          "$(acrServer)/$(imageRepository):$(imageTag)"
+      displayName: Scan image with Trivy
+
+    - task: Docker@2
+      displayName: Push image to ACR
+      condition: |
+        and(
+          succeeded(),
+          ne(variables['Build.Reason'], 'PullRequest')
+        )
+      inputs:
+        command: push
+        containerRegistry: '$(acrConnection)'
+        repository: '$(imageRepository)'
+        tags: |
+          $(imageTag)
+
+- stage: DeployDev
+  displayName: Deploy to Dev
+  dependsOn: Build
+  condition: |
+    and(
+      succeeded(),
+      eq(variables['Build.SourceBranch'], 'refs/heads/develop')
+    )
+  jobs:
+  - deployment: DeployDev
+    environment: axion-dev
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+
+          - task: KubernetesManifest@1
+            displayName: Deploy Axion UI to Dev
+            inputs:
+              action: deploy
+              connectionType: azureResourceManager
+              azureSubscriptionConnection: '$(azureConnection)'
+              azureResourceGroup: '$(resourceGroup)'
+              kubernetesCluster: '$(aksCluster)'
+              namespace: dev
+              manifests: |
+                $(Build.SourcesDirectory)/k8s/deployment.yaml
+                $(Build.SourcesDirectory)/k8s/service.yaml
+              containers: |
+                $(acrServer)/$(imageRepository):$(imageTag)
+
+- stage: DeployProd
+  displayName: Deploy to Prod
+  dependsOn: Build
+  condition: |
+    and(
+      succeeded(),
+      eq(variables['Build.SourceBranch'], 'refs/heads/main')
+    )
+  jobs:
+  - deployment: DeployProd
+    environment: axion-prod
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+
+          - task: KubernetesManifest@1
+            displayName: Deploy Axion UI to Prod
+            inputs:
+              action: deploy
+              connectionType: azureResourceManager
+              azureSubscriptionConnection: '$(azureConnection)'
+              azureResourceGroup: '$(resourceGroup)'
+              kubernetesCluster: '$(aksCluster)'
+              namespace: prod
+              manifests: |
+                $(Build.SourcesDirectory)/k8s/deployment.yaml
+                $(Build.SourcesDirectory)/k8s/service.yaml
+              containers: |
+                $(acrServer)/$(imageRepository):$(imageTag)
