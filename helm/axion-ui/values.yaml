@@ -1,0 +1,24 @@
+replicaCount: 1
+
+appName: axion-ui
+
+image:
+  repository: axionacr2769710445.azurecr.io/axion-ui
+  tag: placeholder
+  pullPolicy: IfNotPresent
+
+containerPort: 80
+
+service:
+  name: axion-ui-svc
+  type: ClusterIP
+  port: 80
+  targetPort: 80
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
