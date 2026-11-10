@@ -103,7 +103,7 @@ stages:
                   --set image.tag=$(imageTag) \
                   --wait --timeout 5m
 
-                helm list -n dev 
+                helm list -n dev
 
 
 - stage: DeployProd
