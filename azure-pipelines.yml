@@ -83,20 +83,28 @@ stages:
           steps:
           - checkout: self
 
-          - task: KubernetesManifest@1
-            displayName: Deploy Axion UI to Dev
+          - task: AzureCLI@2
+            displayName: Deploy Axion UI using Helm
             inputs:
-              action: deploy
-              connectionType: azureResourceManager
-              azureSubscriptionConnection: '$(azureConnection)'
-              azureResourceGroup: '$(resourceGroup)'
-              kubernetesCluster: '$(aksCluster)'
-              namespace: dev
-              manifests: |
-                $(Build.SourcesDirectory)/k8s/deployment.yaml
-                $(Build.SourcesDirectory)/k8s/service.yaml
-              containers: |
-                $(acrServer)/$(imageRepository):$(imageTag)
+              azureSubscription: '$(azureConnection)'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                az aks get-credentials \
+                  --resource-group $(resourceGroup) \
+                  --name $(aksCluster) \
+                  --overwrite-existing
+
+                helm upgrade --install axion-ui-dev \
+                  $(Build.SourcesDirectory)/helm/axion-ui \
+                  --namespace dev \
+                  --values $(Build.SourcesDirectory)/helm/axion-ui/values-dev.yaml \
+                  --set image.repository=$(acrServer)/$(imageRepository) \
+                  --set image.tag=$(imageTag) \
+                  --wait --timeout 5m
+
+                helm list -n dev 
+
 
 - stage: DeployProd
   displayName: Deploy to Prod
